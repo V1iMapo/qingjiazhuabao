@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>请假脚本生成器</title>
+<style>
+  :root{
+    --bg:#0f1117; --card:#181b24; --card2:#1f2430; --line:#2a3040;
+    --txt:#e6e9f0; --sub:#9aa4b8; --acc:#4f8cff; --acc2:#3a6fd8; --ok:#2bb673;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:32px 16px; background:var(--bg); color:var(--txt);
+    font-family:"Microsoft YaHei","PingFang SC",system-ui,-apple-system,Segoe UI,sans-serif;
+    line-height:1.5;
+  }
+  .wrap{max-width:920px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 6px}
+  .desc{color:var(--sub);font-size:13px;margin:0 0 22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 18px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .field label{display:block;font-size:13px;color:var(--sub);margin-bottom:6px}
+  .field label b{color:var(--txt);font-weight:600}
+  .field .tag{display:inline-block;font-size:11px;color:#0b1220;background:var(--acc);
+    border-radius:6px;padding:1px 7px;margin-right:6px;vertical-align:1px}
+  .field input,
+  .field select{
+    width:100%;padding:10px 12px;background:var(--card2);border:1px solid var(--line);
+    border-radius:9px;color:var(--txt);font-size:14px;outline:none;transition:border .15s;
+  }
+  .field input:focus,
+  .field select:focus{border-color:var(--acc)}
+  .field select{appearance:none;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),linear-gradient(135deg,var(--sub) 50%,transparent 50%);
+    background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+    background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px;
+  }
+  .field select option{background:var(--card2);color:var(--txt)}
+
+  .dt-row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+  .dt-row .dt-date{flex:1 1 auto;min-width:0}
+
+  .dt-row .dt-sel{width:64px;flex:0 0 auto;cursor:pointer;text-align-last:center;
+    padding:10px 26px 10px 8px;appearance:none;-webkit-appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),linear-gradient(135deg,var(--sub) 50%,transparent 50%);
+    background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;
+    background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+  }
+  .dt-row .dt-sel option{background:var(--card2);color:var(--txt)}
+  .dt-row .dt-sep{color:var(--sub);font-weight:700;flex:0 0 auto;user-select:none}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+  button{
+    cursor:pointer;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:600;
+    transition:transform .05s,opacity .15s;
+  }
+  button:active{transform:translateY(1px)}
+  .btn-primary{background:var(--acc);color:#fff}
+  .btn-primary:hover{background:var(--acc2)}
+  .btn-ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
+  .btn-ghost:hover{color:var(--txt);border-color:var(--acc)}
+  .hint{font-size:12px;color:var(--sub);margin-top:14px}
+  .ok{color:var(--ok);font-size:13px;margin-top:10px;display:none}
+  .err{color:#ff6b6b;font-size:13px;margin-top:10px;display:none;line-height:1.6}
+  details summary{cursor:pointer;color:var(--acc);font-size:14px;margin-bottom:8px}
+  details ol{color:var(--sub);font-size:13px;padding-left:20px}
+  details li{margin:6px 0}
+  code{background:#0b0e14;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#a9c6ff;font-size:12px}
+  .map{font-size:12.5px;color:var(--sub);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>请假生成器</h1>
+  <p class="desc">点击“生成并下载脚本”，得到一个 ProxyPin 可导入的.json文件。在 ProxyPin「脚本 → 导入」选择该 .json，即可对响应执行字段改写。</p>
+
+  <div class="card">
+    <div class="grid">
+      <div class="field">
+        <label><span class="tag">值1</span><b>姓名</b></label>
+        <input id="input1" placeholder="请输入姓名">
+      </div>
+      <div class="field">
+        <label><span class="tag">值2</span><b>请假类型</b></label>
+        <select id="input2">
+          <option value="">请选择请假类型</option>
+          <option>病假</option>
+          <option>事假</option>
+          <option>公假（因学院任务或比赛外出）</option>
+          <option>其他</option>
+          <option>节假日及寒暑假请假</option>
+        </select>
+      </div>
+      <div class="field">
+        <label><span class="tag">值3</span><b>请假理由</b></label>
+        <input id="input3" placeholder="请输入请假理由">
+      </div>
+      <div class="field">
+        <label><span class="tag">值4</span><b>请假开始时间</b></label>
+        <div class="dt-row">
+          <input class="dt-date" id="d4" type="date" aria-label="日期">
+          <select class="dt-sel" id="h4" aria-label="时"></select>
+          <span class="dt-sep">:</span>
+          <select class="dt-sel" id="m4" aria-label="分"></select>
+          <span class="dt-sep">:</span>
+          <select class="dt-sel" id="s4" aria-label="秒"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label><span class="tag">值5</span><b>请假结束时间</b></label>
+        <div class="dt-row">
+          <input class="dt-date" id="d5" type="date" aria-label="日期">
+          <select class="dt-sel" id="h5" aria-label="时"></select>
+          <span class="dt-sep">:</span>
+          <select class="dt-sel" id="m5" aria-label="分"></select>
+          <span class="dt-sep">:</span>
+          <select class="dt-sel" id="s5" aria-label="秒"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label><span class="tag">值6</span><b>请假申请时间</b></label>
+        <div class="dt-row">
+          <input class="dt-date" id="d6" type="date" aria-label="日期">
+          <select class="dt-sel" id="h6" aria-label="时"></select>
+          <span class="dt-sep">:</span>
+          <select class="dt-sel" id="m6" aria-label="分"></select>
+          <span class="dt-sep">:</span>
+          <select class="dt-sel" id="s6" aria-label="秒"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label><span class="tag">值7</span><b>辅导员姓名</b></label>
+        <input id="input7" placeholder="请输入辅导员姓名">
+      </div>
+      <div class="field">
+        <label><span class="tag">值8</span><b>审批时间</b></label>
+        <div class="dt-row">
+          <input class="dt-date" id="d8" type="date" aria-label="日期">
+          <select class="dt-sel" id="h8" aria-label="时"></select>
+          <span class="dt-sep">:</span>
+          <select class="dt-sel" id="m8" aria-label="分"></select>
+          <span class="dt-sep">:</span>
+          <select class="dt-sel" id="s8" aria-label="秒"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="map">请假类型为下拉单选，仅可选择其中一项；时间填写（时 00-24，分/秒 00-59）。如有空缺或时间格式有误，将无法生成脚本。</div>
+
+    <div class="row">
+      <button class="btn-primary" id="btnGen">生成并下载脚本 (.json)</button>
+      <button class="btn-ghost" id="btnCopyJs">复制脚本代码</button>
+      <button class="btn-ghost" id="btnReset">恢复默认</button>
+    </div>
+    <div class="ok" id="okMsg">已生成请假文件，在 ProxyPin「脚本 → 导入」选择该 .json 即可。</div>
+    <div class="err" id="errMsg"></div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>使用说明</summary>
+      <ol>
+        <li>下载proxypin软件，在软件设置内按照用户ca证书，然后选择启用Https代理。</li>
+        <li>点击“生成并下载脚本”，保存得到按<b>“当天日期+小时+分钟+请假文件”</b>命名的 <code>.json</code>（如 <code>20261014-1530-请假文件.json</code>）</li>
+        <li>打开 ProxyPin选择底下第三个图标进入配置页面 → 进入 <b>脚本(Script)</b> → 点“导入”按钮，选择新生成的 <code>.json</code> 文件（如之前有导入过，需要将之前的文件删除再导入新文件）；导入后列表出现“请假信息改写”并处于启用状态。</li>
+        <li>回到主页点击右下角的开始代理，系统将自动抓取并修改请假信息，正常打开企业微信请假页面就会显示修改后的信息，如需恢复正常，回到软件点击停止代理即可。</li>
+        <li>脚本 URL 匹配整个 <code>lyxgqj.gdppla.edu.cn</code> 域名，命中相应路径的响应时自动改写字段（<code>tryLoginUserInfo</code>、<code>getUserHolidayInfoList</code>、<code>getXsqjsqByPkidNew</code>、<code>getReviewInfo</code>）。</li>
+      </ol>
+    </details>
+  </div>
+</div>
+
+<!-- ProxyPin 脚本模板 -->
+<script type="text/plain" id="scriptTpl">
+// ===== ProxyPin 脚本：请假信息改写 =====
+// 生成时间：__GEN_TIME__
+
+// —— 用户输入值 ——
+var IN1_USERNAME   = __INPUT1__; // 姓名        -> 第29条 userName；第48条 data[0].USERNAME
+var IN2_QJLX       = __INPUT2__; // 请假类型    -> 第34条 QJLX；第40条 QJLXMC
+var IN3_QJLY       = __INPUT3__; // 请假理由    -> 第34条 QJLY；第40条 QJLY
+var IN4_QJKSSJ     = __INPUT4__; // 请假开始时间-> 第34条 QJKSSJ；第40条 QJKSSJ/QJKSSJSTR
+var IN5_QJJSSJ     = __INPUT5__; // 请假结束时间-> 第34条 QJJSSJ；第40条 QJJSSJ/QJJSSJSTR
+var IN6_QJSQSJ     = __INPUT6__; // 请假申请时间-> 第34条 QJSQSJ；第40条 QJSQSJ/QJSQSJSTR；第48条 data[0].ENDTIME(申请时间)
+var IN7_USERNAME2  = __INPUT7__; // 辅导员姓名  -> 第48条 data[1].USERNAME
+var IN8_ENDTIME    = __INPUT8__; // 审批时间    -> 第48条 data[1].ENDTIME
+
+var QJZT_PASS       = "审核通过"; // 第34条 QJZT 固定值
+var QJZTM_PASS      = "2";       // 第34条 QJZTM 状态码
+var ACTIONNAME_PASS = "审核通过"; // 第48条 第二个 actionname 固定值
+
+// 兼容可能存在的 HTTP chunked 分帧前缀：剥掉开头的十六进制长度行与结尾的 0\r\n\r\n
+// （HAR 抓包中常见形如 "e04\n{...}\n0\n\n"）。无 chunked 边界时为 no-op。
+function stripChunked(s) {
+  if (typeof s !== "string") return s;
+  var t = s.replace(/^\s*[0-9a-fA-F]+\r?\n/, "");
+  t = t.replace(/\r?\n0\r?\n\r?\n\s*$/, "");
+  return t;
+}
+
+async function onResponse(context, request, response) {
+  try {
+    var url = (request && request.url) || "";
+    var kind = null;
+    if (url.indexOf("/ydxg/tryLoginUserInfo") !== -1) kind = "login";
+    else if (url.indexOf("/sm-holiday/openapi/getUserHolidayInfoList") !== -1) kind = "list";
+    else if (url.indexOf("/sm-holiday/openapi/getXsqjsqByPkidNew") !== -1) kind = "detail";
+    else if (url.indexOf("/getReviewInfo") !== -1) kind = "review";
+    if (kind === null) return response; // 非目标响应（不解析避免无关报错）
+
+    var raw = response.body;
+    if (typeof raw !== "string" || raw.length === 0) return response;
+    var json = JSON.parse(stripChunked(raw));
+    if (!json) return response;
+
+    if (kind === "login") {
+      // 第29条：用户信息
+      var d29 = json.data;
+      if (d29) {
+        if ("userName" in d29) d29.userName = IN1_USERNAME;
+      }
+      console.log("[改写] 第29条 tryLoginUserInfo");
+    } else if (kind === "list") {
+      // 第34条：请假列表
+      var list = json.data && json.data.list;
+      var it = (Array.isArray(list) && list.length > 0) ? list[0] : null;
+      if (it) {
+        it.QJLX = IN2_QJLX;
+        it.QJLY = IN3_QJLY;
+        it.QJKSSJ = IN4_QJKSSJ;
+        it.QJJSSJ = IN5_QJJSSJ;
+        it.QJSQSJ = IN6_QJSQSJ;
+        it.QJZT = QJZT_PASS;   // 
+        it.QJZTM = QJZTM_PASS; // 
+      }
+      console.log("[改写] 第34条 getUserHolidayInfoList（仅第一项）");
+    } else if (kind === "detail") {
+      // 第40条：请假详情
+      var d40 = json.data;
+      if (d40) {
+        if ("QJLY" in d40) d40.QJLY = IN3_QJLY;
+        if ("QJLXMC" in d40) d40.QJLXMC = IN2_QJLX;
+        if ("QJSQSJ" in d40) d40.QJSQSJ = IN6_QJSQSJ;
+        if ("QJSQSJSTR" in d40) d40.QJSQSJSTR = IN6_QJSQSJ;
+        if ("QJJSSJ" in d40) d40.QJJSSJ = IN5_QJJSSJ;
+        if ("QJJSSJSTR" in d40) d40.QJJSSJSTR = IN5_QJJSSJ;
+        if ("QJKSSJ" in d40) d40.QJKSSJ = IN4_QJKSSJ;
+        if ("QJKSSJSTR" in d40) d40.QJKSSJSTR = IN4_QJKSSJ;
+        d40.SFXYLXDM = 2;
+        d40.SFXYLX = 2;
+        d40.QJSCFZ = 30;
+        d40.QJLXM = 10;
+        d40.QJSCT = 2;
+        d40.QJSCXS = 1;
+        d40.SFM = 1;
+      }
+      console.log("[改写] 第40条 getXsqjsqByPkidNew");
+    } else if (kind === "review") {
+      // 第48条：审批流转记录
+      // data[0] = “申请”记录，其 ENDTIME 即请假详情里的“申请时间” -> 用值6
+      // data[1] = 审批记录，其 ENDTIME 即“审批时间” -> 用值8
+      var arr = json.data;
+      if (Array.isArray(arr)) {
+        if (arr[0]) {
+          if ("USERNAME" in arr[0]) arr[0].USERNAME = IN1_USERNAME;
+          if ("ENDTIME" in arr[0]) arr[0].ENDTIME = IN6_QJSQSJ;
+        }
+        if (arr[1]) {
+          if ("USERNAME" in arr[1]) arr[1].USERNAME = IN7_USERNAME2;
+          if ("ENDTIME" in arr[1]) arr[1].ENDTIME = IN8_ENDTIME;
+          if ("ACTIONNAME" in arr[1]) arr[1].ACTIONNAME = ACTIONNAME_PASS;
+        }
+      }
+      console.log("[改写] 第48条 getReviewInfo");
+    } else {
+      return response; // 非目标响应，原样返回
+    }
+
+    // body 已重写为新 JSON，清理旧 Content-Length / Transfer-Encoding / Content-Encoding，
+    // 并重置 Content-Type，避免部分 WebView 因长度不匹配或编码遗留导致
+    // ERR_CONTENT_LENGTH_MISMATCH、图片/资源破图、JSON 解析失败
+    var hdrs = response.headers;
+    if (hdrs) {
+      ["Content-Length","content-length","Transfer-Encoding","transfer-encoding","Content-Encoding","content-encoding"]
+        .forEach(function(n){
+          if (typeof hdrs.delete === "function") hdrs.delete(n);
+          else if (n in hdrs) delete hdrs[n];
+        });
+      if (typeof hdrs.set === "function") hdrs.set("Content-Type", "application/json;charset=utf-8");
+      else if (typeof hdrs.put === "function") hdrs.put("Content-Type", "application/json;charset=utf-8");
+      else hdrs["Content-Type"] = "application/json;charset=utf-8";
+    }
+    response.body = JSON.stringify(json);
+  } catch (e) {
+    console.log("[改写脚本] 异常: " + e);
+  }
+  return response;
+}
+
+async function onRequest(context, request) {
+  return request;
+}
+</script>
+
+<script>
+(function(){
+  // 当天日期字符串 YYYY-MM-DD
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  var DEFAULTS = {
+    input1:"", input2:"", input3:"",
+    d4: todayStr(), h4:"07", m4:"00", s4:"00",
+    d5: todayStr(), h5:"18", m5:"00", s5:"00",
+    d6:"", h6:"", m6:"", s6:"",
+    input7:"",
+    d8:"", h8:"", m8:"", s8:""
+  };
+
+
+  var TIME_KEYS = [4,5,6,8];
+
+  function pad2(v){ return (v < 10 ? "0" : "") + v; }
+
+  // 填充时/分/秒下拉选项
+  function fillTimeSelect(sel, max){
+    if (!sel) return;
+    var html = "";
+    for (var n = 0; n <= max; n++){
+      var t = pad2(n);
+      html += '<option value="' + t + '">' + t + '</option>';
+    }
+    sel.innerHTML = html;
+  }
+  function fillTimeSelects(){
+    TIME_KEYS.forEach(function(i){
+      fillTimeSelect(document.getElementById("h"+i), 24); // 时 00-24
+      fillTimeSelect(document.getElementById("m"+i), 59); // 分 00-59
+      fillTimeSelect(document.getElementById("s"+i), 59); // 秒 00-59
+    });
+  }
+
+
+  function composeTime(i){
+    var d = document.getElementById("d"+i);
+    var h = document.getElementById("h"+i);
+    var m = document.getElementById("m"+i);
+    var s = document.getElementById("s"+i);
+    if (!d || !h || !m || !s) return "";
+    var dv = d.value || "";
+    if (!dv) return "";
+    // 下拉值恒为两位合法值；万一为空则按 00 处理
+    var hh = h.value || "00";
+    var mm = m.value || "00";
+    var ss = s.value || "00";
+    return dv + " " + hh + ":" + mm + ":" + ss;
+  }
+
+  function collect(){
+    var vals = [];
+    for (var i=1;i<=8;i++){
+      if (TIME_KEYS.indexOf(i) !== -1) vals.push(composeTime(i));
+      else vals.push(document.getElementById("input"+i).value);
+    }
+    return vals;
+  }
+
+  // 脚本元信息
+  var SCRIPT_NAME = "请假审核通过改写";
+  var SCRIPT_URL  = "lyxgqj.gdppla.edu.cn"; // 匹配域名
+
+  // 生成内嵌输入值后的 JS 代码
+  function buildCode(){
+    var tpl = document.getElementById("scriptTpl").textContent;
+    var out = tpl;
+    var vals = collect();
+    for (var i=0;i<vals.length;i++){
+      // JSON.stringify 负责安全转义
+      out = out.split("__INPUT"+(i+1)+"__").join(JSON.stringify(vals[i]));
+    }
+    out = out.split("__GEN_TIME__").join(new Date().toLocaleString("zh-CN"));
+    return out;
+  }
+
+  // 包装成 ProxyPin 可导入的 JSON：数组，每项含 enabled/name/url/script
+  function buildImportJson(){
+    var payload = [{
+      "enabled": true,
+      "name": SCRIPT_NAME,
+      "url": SCRIPT_URL,
+      "script": buildCode()
+    }];
+    return JSON.stringify(payload, null, 2);
+  }
+
+  // 生成文件名
+  function stampFileName(){
+    var d = new Date();
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate())
+         + "-" + pad2(d.getHours()) + pad2(d.getMinutes())
+         + "-请假文件.json";
+  }
+
+  function download(name, text, mime){
+    var blob = new Blob([text], {type: mime || "application/json;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  // 校验
+  var FIELD_NAMES = ["姓名","请假类型","请假理由","请假开始时间","请假结束时间","请假申请时间","辅导员姓名","审批时间"];
+  var TIME_RE = /^\d{4}-\d{2}-\d{2} ([01]\d|2[0-4]):[0-5]\d:[0-5]\d$/;
+  function validate(){
+    var vals = collect();
+    var problems = [];
+    for (var i = 0; i < vals.length; i++){
+      var v = vals[i];
+      var name = FIELD_NAMES[i] || ("值" + (i + 1));
+      if (v === "" || v == null){
+        problems.push("「" + name + "」未填写");
+      } else if (TIME_KEYS.indexOf(i + 1) !== -1 && !TIME_RE.test(v)){
+        problems.push("「" + name + "」格式有误（应为 YYYY-MM-DD HH:mm:ss，时 00-24）");
+      }
+    }
+    return problems;
+  }
+
+  function showProblems(problems){
+    var err = document.getElementById("errMsg");
+    var ok = document.getElementById("okMsg");
+    if (ok) ok.style.display = "none";
+    if (!err) return;
+    if (problems && problems.length){
+      err.textContent = "无法生成脚本：" + problems.join("；") + "。请补齐或修正后重试。";
+      err.style.display = "block";
+    } else {
+      err.style.display = "none";
+    }
+  }
+
+  document.getElementById("btnGen").addEventListener("click", function(){
+    var problems = validate();
+    if (problems.length){ showProblems(problems); return; } // 拒绝生成
+    showProblems([]);
+    var text = buildImportJson();
+    var fname = stampFileName();
+    download(fname, text);
+    var ok = document.getElementById("okMsg");
+    ok.textContent = "已生成 " + fname + "，在 ProxyPin「脚本 → 导入」选择该文件即可。";
+    ok.style.display = "block";
+    setTimeout(function(){ ok.style.display = "none"; }, 5000);
+  });
+
+  document.getElementById("btnCopyJs").addEventListener("click", function(){
+    var problems = validate();
+    if (problems.length){ showProblems(problems); return; } // 拒绝生成
+    showProblems([]);
+    var code = buildCode();
+    var ta = document.createElement("textarea");
+    ta.value = code; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch(e){}
+    document.body.removeChild(ta);
+    var ok = document.getElementById("okMsg");
+    ok.textContent = "已复制脚本代码，可在 ProxyPin「脚本 → 新增」中粘贴（名称任意，URL 填 lyxgqj.gdppla.edu.cn）。";
+    ok.style.display = "block";
+    setTimeout(function(){ ok.style.display = "none"; }, 5000);
+  });
+
+  // 应用默认值：所有字段置空；开始/结束时间填当天 07:00:00 / 18:00:00；申请/审批时间留空
+  function applyDefaults(){
+    for (var k in DEFAULTS){
+      var el = document.getElementById(k);
+      if (el) el.value = DEFAULTS[k];
+    }
+  }
+
+  document.getElementById("btnReset").addEventListener("click", function(){
+    applyDefaults();
+  });
+
+  fillTimeSelects(); 
+  applyDefaults();   
+})();
+</script>
+</body>
+</html>
